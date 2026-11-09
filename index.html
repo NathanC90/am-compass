@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0E7C6B">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>AM 轉職羅盤</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700&family=IBM+Plex+Mono:wght@500&display=swap">
+</head>
+<body>
+<style>
+/* Layout: mobile-first single column, max 720px, fixed bottom tab bar; color encodes who owns a task (AM teal / AL blue / milestone amber) */
+:root{
+  --bg:#F3F6F5;--surface:#FFFFFF;--ink:#14211F;--muted:#5B6B68;--line:#DCE3E1;
+  --accent:#0E7C6B;--accent-soft:#DFF0EC;--al:#3B5B9A;--al-soft:#E6ECF7;
+  --goal:#A85A14;--goal-soft:#F7EADB;--bad:#B42318;--bad-soft:#FBE8E6;--study:#6B6F86;--study-soft:#ECECF3;
+  --f-display:"Noto Serif TC","Songti TC",serif;
+  --f-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --r:14px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0E1514;--surface:#162120;--ink:#E5EEEC;--muted:#98AAA6;--line:#2A3836;
+  --accent:#43C4AA;--accent-soft:#17382F;--al:#94ACE2;--al-soft:#1D2740;
+  --goal:#E7A35D;--goal-soft:#3A2919;--bad:#F2877A;--bad-soft:#3B1E1B;--study:#B3B6CC;--study-soft:#262838;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1514;--surface:#162120;--ink:#E5EEEC;--muted:#98AAA6;--line:#2A3836;
+  --accent:#43C4AA;--accent-soft:#17382F;--al:#94ACE2;--al-soft:#1D2740;
+  --goal:#E7A35D;--goal-soft:#3A2919;--bad:#F2877A;--bad-soft:#3B1E1B;--study:#B3B6CC;--study-soft:#262838;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.6}
+.wrap{max-width:720px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px calc(96px + env(safe-area-inset-bottom,0px))}
+header.top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--f-display);font-size:1.6rem;line-height:1.25;margin:0;text-wrap:balance}
+h2{font-family:var(--f-display);font-size:1.2rem;margin:0;text-wrap:balance}
+h3{font-size:1rem;margin:0}
+.sub{color:var(--muted);font-size:.85rem;margin:2px 0 0}
+.sync{font-size:.75rem;color:var(--muted);border:1px solid var(--line);border-radius:99px;padding:2px 10px;white-space:nowrap}
+.sync.ok{color:var(--accent);border-color:var(--accent)}
+.stack{display:flex;flex-direction:column;gap:14px;margin-top:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;min-width:0}
+.eyebrow{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.between{justify-content:space-between}
+.muted{color:var(--muted)}
+.small{font-size:.82rem}
+/* hero stats */
+.hero{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center}
+.ring{width:84px;height:84px}
+.ring circle{fill:none;stroke-width:9}
+.ring .bgc{stroke:var(--line)}.ring .fg{stroke:var(--accent);stroke-linecap:round;transition:stroke-dashoffset .4s}
+.ring text{fill:var(--ink);font-family:var(--f-mono);font-size:19px}
+.phase-pill{display:inline-block;background:var(--accent-soft);color:var(--accent);border-radius:99px;padding:1px 10px;font-size:.78rem;font-weight:700}
+/* items */
+.list{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.item{display:grid;grid-template-columns:22px 1fr auto;gap:10px;align-items:start;padding:10px 12px;border-radius:10px;background:var(--bg);border-left:4px solid var(--c,var(--line));cursor:pointer}
+.item input{width:20px;height:20px;margin:2px 0 0;accent-color:var(--accent)}
+.item .txt{min-width:0}
+.item.done .txt>span:first-child{text-decoration:line-through;color:var(--muted)}
+.item .meta{display:block;font-size:.76rem;color:var(--muted)}
+.tag{font-size:.7rem;font-weight:700;border-radius:6px;padding:1px 7px;background:var(--cs,var(--line));color:var(--c,var(--ink));white-space:nowrap;align-self:center}
+.t-am{--c:var(--accent);--cs:var(--accent-soft)}.t-al{--c:var(--al);--cs:var(--al-soft)}
+.t-goal{--c:var(--goal);--cs:var(--goal-soft)}.t-study{--c:var(--study);--cs:var(--study-soft)}
+.t-bad{--c:var(--bad);--cs:var(--bad-soft)}
+.late{color:var(--bad);font-weight:700}
+.empty{color:var(--muted);font-size:.88rem;padding:8px 0}
+/* SLA chips */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.chip{border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:.8rem;display:flex;flex-direction:column;min-width:0}
+.chip b{font-family:var(--f-mono);color:var(--accent);font-size:1rem}
+/* calendar */
+.cal-head{display:flex;justify-content:space-between;align-items:center}
+.btn{font:inherit;font-size:.88rem;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:6px 12px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--surface);border-color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:12px}
+.dow{text-align:center;font-size:.72rem;color:var(--muted);font-weight:700}
+.day{aspect-ratio:1/1.05;max-width:100%;border:1px solid transparent;border-radius:10px;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;font:inherit;color:var(--ink);padding:0}
+.day.out{opacity:.35}
+.day.today{border-color:var(--accent)}
+.day.sel{background:var(--accent);color:var(--surface)}
+.day .n{font-family:var(--f-mono);font-size:.9rem}
+.dots{display:flex;gap:3px;height:6px}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--c)}
+.day.sel .dot{background:var(--surface)}
+.day.has-late .n{color:var(--bad);font-weight:700}
+.day.sel.has-late .n{color:var(--surface)}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:.76rem;color:var(--muted);margin-top:10px}
+.legend span{display:flex;align-items:center;gap:5px}
+/* plan */
+.bar{height:6px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:99px}
+input[type=date]{font:inherit;border:1px solid var(--line);border-radius:10px;padding:6px 10px;background:var(--surface);color:var(--ink)}
+/* quiz */
+.q textarea{width:100%;min-height:84px;font:inherit;font-size:.9rem;border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--bg);color:var(--ink);resize:vertical;margin-top:8px}
+.ans{margin-top:10px;background:var(--accent-soft);border-radius:10px;padding:10px 12px;font-size:.88rem}
+.ans ol,.ans ul{margin:4px 0;padding-left:20px}
+.marks{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.mark{font:inherit;font-size:.8rem;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:99px;padding:3px 12px;cursor:pointer}
+.mark[aria-pressed=true].ok{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.mark[aria-pressed=true].part{background:var(--goal);border-color:var(--goal);color:var(--surface)}
+.mark[aria-pressed=true].no{background:var(--bad);border-color:var(--bad);color:var(--surface)}
+.qn{font-family:var(--f-mono);color:var(--accent);margin-right:6px}
+/* learn */
+.seg{display:flex;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:3px;gap:3px}
+.seg button{flex:1;font:inherit;font-size:.88rem;border:0;background:transparent;color:var(--muted);border-radius:9px;padding:7px 4px;cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent-soft);color:var(--accent);font-weight:700}
+.steps{display:flex;flex-direction:column;gap:0;margin-top:6px}
+.step{display:grid;grid-template-columns:44px 1fr;gap:12px;position:relative;padding-bottom:16px}
+.step:not(:last-child)::before{content:"";position:absolute;left:21px;top:40px;bottom:0;width:2px;background:var(--line)}
+.step .num{width:44px;height:44px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-family:var(--f-mono);font-weight:500}
+.step .body{min-width:0}
+.sla{font-family:var(--f-mono);font-size:.75rem;background:var(--goal-soft);color:var(--goal);border-radius:6px;padding:1px 7px;margin-left:6px;white-space:nowrap}
+.duo{display:grid;grid-template-columns:1fr;gap:14px}
+@media (min-width:600px){.duo{grid-template-columns:1fr 1fr}}
+.duo ol{margin:8px 0 0;padding-left:20px;font-size:.9rem}
+.search{width:100%;font:inherit;border:1px solid var(--line);border-radius:10px;padding:9px 12px;background:var(--surface);color:var(--ink)}
+.term{padding:10px 0;border-top:1px solid var(--line)}
+.term:first-child{border-top:0}
+.term b{font-size:.98rem}
+.term .en{font-family:var(--f-mono);font-size:.8rem;color:var(--accent);margin-left:6px}
+.term p{margin:2px 0 0;font-size:.88rem;color:var(--muted)}
+/* bottom nav */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--line);padding-left:max(8px,env(safe-area-inset-left,0px));padding-right:max(8px,env(safe-area-inset-right,0px));padding-bottom:env(safe-area-inset-bottom,0px)}
+nav.tabs .in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr)}
+nav.tabs a{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 10px;color:var(--muted);text-decoration:none;font-size:.72rem}
+nav.tabs a svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+nav.tabs a[aria-current=page]{color:var(--accent);font-weight:700}
+.warn{border:1px solid var(--bad);background:var(--bad-soft);color:var(--bad);border-radius:10px;padding:8px 12px;font-size:.85rem}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1 id="title">今日</h1>
+      <p class="sub" id="subtitle">Mighty DAO · Talent Bridge 客戶經理（Account Manager）</p>
+    </div>
+    <span class="sync" id="sync">僅存於此裝置</span>
+  </header>
+  <main id="view"></main>
+</div>
+
+<nav class="tabs" aria-label="主選單"><div class="in">
+  <a href="#today" data-v="today"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>今日</a>
+  <a href="#calendar" data-v="calendar"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>行事曆</a>
+  <a href="#plan" data-v="plan"><svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/></svg>轉職計畫</a>
+  <a href="#quiz" data-v="quiz"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5V14M12 17.5v.01"/></svg>測驗</a>
+  <a href="#learn" data-v="learn"><svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5M8 7h7"/></svg>知識庫</a>
+</div></nav>
+
+<script>
+/* ---------- content ---------- */
+const PHASES=[
+ {n:1,title:'打好基本功、學習產業',from:1,to:4},
+ {n:2,title:'累積可量化的成果',from:5,to:12},
+ {n:3,title:'正式轉職',from:13,to:26}];
+const PLAN=[
+ {id:'p01',w:1,t:'完成「測驗」12 題，熟記 8 步驟時限'},
+ {id:'p02',w:1,t:'安裝 MetaMask 或 Rabby 錢包，助記詞（Seed Phrase）離線抄寫保管'},
+ {id:'p03',w:2,t:'在交易所買少量 ETH，提領到自己的錢包'},
+ {id:'p04',w:2,t:'建立私人 JD 觀察筆記：職位、技能、薪資、生態系（Ecosystem）'},
+ {id:'p05',w:3,t:'把資產跨鏈（Bridge）到一條 L2（Base 或 Arbitrum）'},
+ {id:'p06',w:3,t:'在 DEX（例如 Uniswap）做一次兌換（Swap）'},
+ {id:'p07',w:4,t:'在 Snapshot 參與一次 DAO 治理投票'},
+ {id:'p08',w:4,t:'用區塊瀏覽器（Etherscan）查自己的交易紀錄'},
+ {id:'p09',w:4,t:'連續 4 週，週四、週日狀態更新零遺漏'},
+ {id:'p10',w:5,t:'建立個人成果數據表：項目數、履歷數、面試率、錄取（Placement）數、時限達成率'},
+ {id:'p11',w:6,t:'在 X 或 LinkedIn 發第一篇 web3 招募趨勢觀察（匿名化）'},
+ {id:'p12',w:8,t:'向 AL 提出一項流程優化提案（例如追蹤模板、自動提醒）'},
+ {id:'p13',w:8,t:'發第二篇招募趨勢觀察'},
+ {id:'p14',w:10,t:'發第三篇招募趨勢觀察'},
+ {id:'p15',w:12,t:'選定一條目標路線：招募／BD／社群營運／DAO 營運'},
+ {id:'p16',w:12,t:'更新履歷與 LinkedIn，寫入量化成果'},
+ {id:'p17',w:13,t:'列出 10 位想認識的產業人士（含合作愉快的項目方主管）'},
+ {id:'p18',w:14,t:'完成 2 場資訊型訪談（Informational Interview）'},
+ {id:'p19',w:16,t:'請 AL、S 姐引薦或推薦'},
+ {id:'p20',w:18,t:'投遞 5 個目標職缺（先確認無利益衝突）'},
+ {id:'p21',w:20,t:'再完成 2 場資訊型訪談'},
+ {id:'p22',w:22,t:'面試準備：web3 時事、3 個 STAR 成果案例'},
+ {id:'p23',w:26,t:'拿到 Offer，或檢討後調整下一輪計畫'}];
+const ROUTINE={
+ 1:[{k:'al-mon',type:'al',tag:'AL',t:'看 AL 週一同步，留意推薦給你項目的人選'}],
+ 4:[{k:'am-thu',type:'am',tag:'AM',t:'完成本週第一次狀態更新（項目紀錄）'}],
+ 5:[{k:'al-fri',type:'al',tag:'AL',t:'看 AL 週五同步，跟進新人選'}],
+ 6:[{k:'study',type:'study',tag:'學習',t:'Web3 學習 2 小時：上鏈實作或整理 JD 筆記'}],
+ 0:[{k:'am-sun',type:'am',tag:'AM',t:'完成本週第二次狀態更新（項目紀錄）'}]};
+const SLA=[['12h','AL 指派 AM'],['24h','AM 打招呼並建「項目紀錄」'],['72h','取得 JD'],['24h','JD 建檔'],['48h','email 確認收到履歷'],['24–48h','送履歷後跟進'],['每 2 週','結案後確認新合作']];
+const STEPS=[
+ ['項目進入','','BD 在 TG「Talent Bridge Program-BD 討論」Tag Account Lead，說明項目。'],
+ ['指派 AM','12h','AL 在 12 小時內指派 AM，以 LINE 通知，並把 AM 加入項目方的 TG 群組。'],
+ ['AM 承接','24h','收到指派後 24 小時內，在 TG 項目群組和項目方打招呼，並在表單「項目紀錄」頁籤建立資訊。'],
+ ['JD 建檔','72h / 24h','承接後 72 小時內取得 JD；收到 JD 後 24 小時內用 JD Template 建檔至 JD 資料夾，並把職缺概述更新到「職缺－合作中」。'],
+ ['招募／推薦','週一、五','AL 每週一、五把資訊整理到社群，請 S 姐推薦人選。AM 自行留意自己項目的推薦人選，並更新「職缺－合作中」。沒有人選時，備妥資訊讓 AL 安排公開招募。'],
+ ['履歷提交','48h','收到社群人選的履歷後，48 小時內以 email 回覆人選確認收到，下載並歸檔到資料夾，再到 TG 群內提交給項目方。公開招募的人選請到「公開招募人選頁籤」找 JD 連結並下載歸檔。'],
+ ['面試／追蹤','24–48h','送出履歷後以 24–48 小時為基礎跟進，直到該節點結案。有更新就即時更新「職缺－合作中」，每週四、日維護「項目紀錄」。追蹤：是否推進面試、不推進的原因、面試結果、面試日期、是否接受 offer。'],
+ ['結案／延伸','每 2 週','職缺關閉後，把它從「職缺－合作中」移到「職缺－結束」。之後每 2 週確認新的合作機會，直到終止合作。']];
+const AM_DUTY=['項目方的主要對接窗口','掌握項目方需求、JD、候選人與進度','TG 溝通與 follow-up','維護所有文件、表單、資料夾','追蹤候選人提交、面試與 Offer 進度','每週四、日主動更新「項目紀錄」','發現問題時主動提出，需要資源時向 AL 求助'];
+const AL_DUTY=['指派 AM、確認項目承接','提醒關鍵 deadline 與流程節點','提供社群、S 姐與團隊資源','協助處理需要升級或跨團隊協調的問題','每週一、五掌握整體項目狀況','不定時加入項目方對話，讓項目方知道是團隊在服務','發現風險時協助 AM，但不取代 AM 管理項目'];
+const QUIZ=[
+ {q:'用一句話說明 AM（Account Manager）和 AL（Account Lead）的分工核心原則。',a:'AM 是項目 Owner；AL 是輔助與協調資源的角色，只在需要時介入項目管理。目標是讓每位 AM 建立完整的 Account Management 能力，而不是讓 AL 掌握所有項目。'},
+ {q:'列出 AM 七項職責中的至少五項。',a:'<ol>'+AM_DUTY.map(x=>'<li>'+x+'</li>').join('')+'</ol>'},
+ {q:'項目方（Client）有問題時，主要窗口是誰？AL 在什麼時候、為什麼會加入對話？',a:'AM 是主要窗口。AL 會不定時參與，讓項目方感受到「這是一個團隊在服務」，而不是單一窗口；遇到需要升級、跨團隊協調或有風險時，AL 也會協助，但不取代 AM。'},
+ {q:'簡報說文件維護（Documentation）「不是 ___，而是 ___」。請填空並說明為什麼重要。',a:'不是「行政附加工作」，而是「Account Management 的基本工作」。AL 每週一、五靠你的紀錄掌握整體狀況；紀錄不清楚，團隊就無法支援你，也無法接手。'},
+ {q:'排序並寫出時限與記錄位置：AL 指派你／TG 打招呼／取得 JD／JD 建檔／確認收到履歷。',a:'<ol><li>AL 在 <b>12h</b> 內指派（LINE 通知、加入 TG）</li><li>收到指派 <b>24h</b> 內在 TG 打招呼，並在「項目紀錄」建立資訊</li><li>承接後 <b>72h</b> 內取得 JD</li><li>收到 JD <b>24h</b> 內用 JD Template 建檔到 JD 資料夾，並更新「職缺－合作中」</li><li>收到社群人選履歷 <b>48h</b> 內 email 確認，下載歸檔後在 TG 提交項目方</li></ol>'},
+ {q:'送出履歷後多久跟進一次？列出至少四項必須追蹤的內容。',a:'以 <b>24–48h</b> 為基礎跟進，直到節點結案。追蹤內容：是否推進面試、不推進的原因、面試結果、面試日期、是否接受 offer。即時更新「職缺－合作中」，週四、日更新「項目紀錄」。'},
+ {q:'週一、週四、週五、週日分別要做什麼？由誰負責？',a:'<ul><li>週一：AL 依最新狀況進行團隊／社群同步</li><li>週四：AM 完成當週第一次狀態更新</li><li>週五：AL 依最新狀況進行團隊／社群同步</li><li>週日：AM 完成第二次狀態更新</li></ul>'},
+ {q:'今天週三，AL 週一發出的人選推薦中沒有適合你職缺的人。你該怎麼做？',a:'AM 要自行留意自己項目的推薦人選，並更新到「職缺－合作中」。確定沒有人選時，依「公開招募準備資料說明」備妥資訊，請 AL 安排公開招募。週五 AL 還會再同步一次。'},
+ {q:'你五天前送出三份履歷，24–48h 也跟進過了，項目方仍沒回。下一步怎麼做？記錄在哪裡？',a:'繼續以 24–48h 節奏跟進，並把每次跟進與狀態記錄在「職缺－合作中」，週四、日更新「項目紀錄」。這屬於「Follow-up 卡住」，要主動私訊 AL（LINE 或 TG）。AL 可以協助升級、加入對話。'},
+ {q:'項目方已錄取人選。說明結案流程，以及結案後還要做什麼。',a:'把職缺從「職缺－合作中」移到「職缺－結束」，確認 Offer 結果都已記錄。之後每 2 週向項目方確認是否有新的合作機會，直到終止合作。'},
+ {q:'你手上有六個項目，週四更新一直來不及，另一個項目方需求反覆改變。簡報說該怎麼處理？',a:'「項目太多、時間無法管理」和「項目方需求不清楚」都在「遇到問題怎麼辦」清單上：主動私訊 AL（LINE 或 TG）反映並討論。AL 會一起檢視「AM 的項目量是否需要調整」。不要默默撐著。'},
+ {q:'你覺得週四、週日兩次更新太繁瑣，可以提出來嗎？向誰提、怎麼提？',a:'可以。簡報明說「流程不是死的」。「回報頻率是否合理」本來就是要一起檢視的項目。反映給 AL，具體說明哪裡卡、建議怎麼改，一起調整優化。'}];
+const GLOSS={
+ '基礎概念':[['區塊鏈','Blockchain','由許多電腦共同維護、難以竄改的公開帳本'],['智能合約','Smart Contract','部署在鏈上、條件達成就自動執行的程式'],['錢包','Wallet','管理私鑰和資產的工具，例如 MetaMask'],['私鑰／助記詞','Private Key / Seed Phrase','資產的唯一鑰匙，洩漏就等於資產被盜，絕不給任何人'],['手續費','Gas Fee','在鏈上執行交易要付給網路的費用'],['代幣','Token','鏈上的數位資產，可代表貨幣、權益、治理權等'],['穩定幣','Stablecoin','與法幣掛鉤的代幣，例如 USDT、USDC'],['主網／測試網','Mainnet / Testnet','正式運作的網路／測試用的網路'],['去中心化','Decentralization','沒有單一機構控制，由社群或程式規則運作'],['上鏈','On-chain','直接在區塊鏈上發生、可公開查證的操作']],
+ '產業地圖':[['公鏈（第一層）','Layer 1','底層區塊鏈，例如 Ethereum、Solana、Bitcoin'],['擴容鏈（第二層）','Layer 2','建在 L1 之上、更快更便宜的鏈，例如 Arbitrum、Base、Optimism'],['基礎設施','Infrastructure','節點服務（RPC Provider）、預言機（Oracle）、跨鏈橋（Bridge）'],['預言機','Oracle','把鏈下資料（例如價格）帶上鏈的服務'],['去中心化金融','DeFi','去中心化交易所（DEX）、借貸（Lending）、質押（Staking）'],['中心化交易所','CEX','例如 Binance、OKX，是招募需求很大的一類雇主'],['託管與資安','Custody / Security','資產託管、智能合約稽核（Audit）'],['現實世界資產','RWA','把債券、房地產等資產代幣化（Tokenization）'],['去中心化自治組織','DAO','用代幣投票治理的組織，Mighty DAO 就是一例'],['NFT／鏈遊','NFT / GameFi','數位收藏品、區塊鏈遊戲'],['AI × 加密','AI × Crypto','AI 代理（AI Agent）結合鏈上應用']],
+ '常見職位':[['智能合約工程師','Smart Contract Engineer','看是否會 Solidity 或 Rust、有沒有合約上過主網'],['協議工程師','Protocol Engineer','偏底層，需要分散式系統（Distributed Systems）經驗'],['開發者關係','DevRel','既懂技術又會經營開發者社群'],['社群經理','Community Manager','管理 Discord／TG 社群、經營 X 帳號'],['生態系發展','Ecosystem Growth','吸引其他項目在自家鏈上開發'],['代幣經濟設計','Tokenomics','設計代幣供給、分配與解鎖'],['研究員','Research Analyst','分析賽道（Sector）與項目'],['合規','Compliance / Legal','KYC（身分驗證）、AML（反洗錢）、各國監管'],['商務開發','BD','談合作、拓展客戶與夥伴']],
+ '產業行話':[['代幣薪酬','Token Allocation','薪資的一部分以代幣發放，談 Offer 時要問清楚'],['解鎖期','Vesting','代幣分批發放，例如「一年懸崖期（Cliff）、四年解鎖」'],['牛市／熊市','Bull / Bear Market','招募需求跟著市場走：熊市凍結職缺，牛市搶人'],['空投','Airdrop','免費發放代幣給早期使用者'],['鎖倉總價值','TVL','Total Value Locked，衡量 DeFi 規模'],['領先資訊','Alpha','比市場早知道的有價值資訊'],['自己做研究','DYOR','Do Your Own Research'],['大家都會成功','WAGMI','We\'re All Gonna Make It，社群打氣用語'],['捲款跑路','Rug Pull','項目方帶走資金消失'],['治理投票','Governance / Snapshot','持幣者對提案投票，Snapshot 是常用的投票平台'],['多簽','Multisig','需要多人簽署才能動用資金的錢包']]};
+
+/* ---------- date helpers ---------- */
+const pad=n=>String(n).padStart(2,'0');
+const ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const parse=s=>{const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)};
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const diffDays=(a,b)=>Math.round((parse(ymd(a))-parse(ymd(b)))/864e5);
+const TODAY=parse(ymd(new Date()));
+const WD='日一二三四五六';
+const fmt=d=>(d.getMonth()+1)+'/'+d.getDate()+'（'+WD[d.getDay()]+'）';
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ---------- state ---------- */
+const LS='tb-am-compass-v1';
+let S={start:ymd(TODAY),done:{},routine:{},quiz:{}};
+try{const x=JSON.parse(localStorage.getItem(LS)||'null');if(x&&x.start)S=Object.assign(S,x)}catch(e){}
+let ref=null,writing=false,pending=false,timer=null;
+function save(){
+  try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}
+  if(!ref)return;clearTimeout(timer);timer=setTimeout(flush,600);
+}
+async function flush(){
+  if(writing){pending=true;return}
+  writing=true;setSync('同步中…','');
+  try{await ref.set(JSON.parse(JSON.stringify(S)));setSync('已同步到帳號','ok')}
+  catch(e){setSync('同步失敗，已存於此裝置','')}
+  writing=false;if(pending){pending=false;flush()}
+}
+function setSync(t,c){const el=document.getElementById('sync');el.textContent=t;el.className='sync '+c}
+
+const start=()=>parse(S.start);
+const END_DAYS=26*7;
+const dueOf=p=>addDays(start(),p.w*7-1);
+const weekNo=()=>Math.min(26,Math.max(1,Math.floor(diffDays(TODAY,start())/7)+1));
+const phaseOf=w=>PHASES.find(p=>w>=p.from&&w<=p.to);
+function routineOn(d){
+  const off=diffDays(d,start());if(off<0||off>=END_DAYS)return[];
+  return (ROUTINE[d.getDay()]||[]).map(r=>({...r,id:ymd(d)+'|'+r.k,kind:'r'}));
+}
+function goalsOn(d){return PLAN.filter(p=>diffDays(dueOf(p),d)===0).map(p=>({id:p.id,kind:'p',type:'goal',tag:'第 '+p.w+' 週',t:p.t}))}
+const isDone=it=>it.kind==='p'?!!S.done[it.id]:!!S.routine[it.id];
+
+function itemHTML(it,late){
+  const done=isDone(it);
+  return `<label class="item t-${it.type}${done?' done':''}"><input type="checkbox" data-kind="${it.kind}" data-id="${esc(it.id)}"${done?' checked':''}><span class="txt"><span>${esc(it.t)}</span>${it.meta?`<span class="meta${late?' late':''}">${it.meta}</span>`:''}</span><span class="tag">${esc(it.tag)}</span></label>`;
+}
+
+/* ---------- views ---------- */
+const V={};
+V.today=()=>{
+  const w=weekNo(),ph=phaseOf(w),doneN=PLAN.filter(p=>S.done[p.id]).length,pct=Math.round(doneN/PLAN.length*100);
+  const C=2*Math.PI*36,before=diffDays(TODAY,start())<0;
+  const todays=[...routineOn(TODAY),...goalsOn(TODAY)];
+  const weekGoals=PLAN.filter(p=>!S.done[p.id]&&p.w===w&&diffDays(dueOf(p),TODAY)>0).map(p=>({id:p.id,kind:'p',type:'goal',tag:'本週',t:p.t,meta:'截止 '+fmt(dueOf(p))}));
+  const lateGoals=PLAN.filter(p=>!S.done[p.id]&&diffDays(dueOf(p),TODAY)<0).map(p=>({id:p.id,kind:'p',type:'bad',tag:'逾期',t:p.t,meta:'原訂 '+fmt(dueOf(p))}));
+  const lateRoutine=[];for(let i=1;i<=7;i++){const d=addDays(TODAY,-i);routineOn(d).filter(r=>r.type==='am'&&!isDone(r)).forEach(r=>lateRoutine.push({...r,type:'bad',tag:'補做',meta:fmt(d)}))}
+  const late=[...lateRoutine,...lateGoals];
+  const next=[];for(let i=1;i<=6;i++){const d=addDays(TODAY,i);[...routineOn(d),...goalsOn(d)].forEach(x=>next.push(`<li><span class="mono">${fmt(d)}</span> ${esc(x.t)}</li>`))}
+  return `<div class="stack">
+  <section class="card hero">
+    <svg class="ring" viewBox="0 0 84 84" role="img" aria-label="轉職計畫完成 ${pct}%"><circle class="bgc" cx="42" cy="42" r="36"/><circle class="fg" cx="42" cy="42" r="36" stroke-dasharray="${C}" stroke-dashoffset="${C*(1-pct/100)}" transform="rotate(-90 42 42)"/><text x="42" y="48" text-anchor="middle">${pct}%</text></svg>
+    <div><div class="eyebrow">${fmt(TODAY)}</div>
+    <h2>${before?'計畫尚未開始':'第 <span class="mono">'+w+'</span> / 26 週'}</h2>
+    <span class="phase-pill">第 ${ph.n} 階段 · ${ph.title}</span>
+    <p class="small muted" style="margin:6px 0 0">轉職計畫 ${doneN} / ${PLAN.length} 項完成</p></div>
+  </section>
+  ${late.length?`<section class="card"><div class="row between"><h3>需要補做</h3><span class="tag t-bad">${late.length} 項</span></div><div class="list">${late.map(x=>itemHTML(x,true)).join('')}</div></section>`:''}
+  <section class="card"><h3>今天</h3><div class="list">${todays.length?todays.map(x=>itemHTML(x)).join(''):'<p class="empty">今天沒有固定節點。檢查有沒有送出 24–48 小時的履歷需要跟進。</p>'}</div></section>
+  ${weekGoals.length?`<section class="card"><h3>本週目標</h3><div class="list">${weekGoals.map(x=>itemHTML(x)).join('')}</div></section>`:''}
+  <section class="card"><h3>時限速查</h3><div class="chips">${SLA.map(([a,b])=>`<div class="chip"><b>${a}</b>${b}</div>`).join('')}</div></section>
+  <section class="card"><h3>接下來 6 天</h3>${next.length?`<ul class="small" style="margin:8px 0 0;padding-left:18px">${next.join('')}</ul>`:'<p class="empty">沒有排定事項。</p>'}</section>
+  </div>`;
+};
+let calMonth=new Date(TODAY.getFullYear(),TODAY.getMonth(),1),calSel=ymd(TODAY);
+V.calendar=()=>{
+  const y=calMonth.getFullYear(),m=calMonth.getMonth(),first=new Date(y,m,1),gridStart=addDays(first,-first.getDay());
+  let cells='';for(const d of WD)cells+=`<div class="dow">${d}</div>`;
+  for(let i=0;i<42;i++){
+    const d=addDays(gridStart,i),items=[...routineOn(d),...goalsOn(d)],key=ymd(d);
+    const late=diffDays(d,TODAY)<0&&items.some(x=>(x.type==='am'||x.type==='goal')&&!isDone(x));
+    const types=[...new Set(items.map(x=>x.type))];
+    cells+=`<button class="day${d.getMonth()!==m?' out':''}${key===ymd(TODAY)?' today':''}${key===calSel?' sel':''}${late?' has-late':''}" data-day="${key}" aria-label="${fmt(d)}，${items.length} 項"><span class="n">${d.getDate()}</span><span class="dots">${types.map(t=>`<i class="dot t-${t}"></i>`).join('')}</span></button>`;
+  }
+  const sd=parse(calSel),items=[...routineOn(sd),...goalsOn(sd)];
+  return `<div class="stack"><section class="card">
+    <div class="cal-head"><button class="btn" data-cal="-1" aria-label="上個月">‹</button><h2 class="mono">${y} 年 ${m+1} 月</h2><button class="btn" data-cal="1" aria-label="下個月">›</button></div>
+    <div class="grid">${cells}</div>
+    <div class="legend"><span><i class="dot t-am"></i>AM 狀態更新</span><span><i class="dot t-al"></i>AL 同步</span><span><i class="dot t-goal"></i>計畫截止</span><span><i class="dot t-study"></i>Web3 學習</span></div>
+  </section>
+  <section class="card"><div class="row between"><h3>${fmt(sd)}</h3><button class="btn" data-cal="today">回到今天</button></div>
+  <div class="list">${items.length?items.map(x=>itemHTML(x)).join(''):'<p class="empty">這天沒有排定事項。</p>'}</div></section></div>`;
+};
+V.plan=()=>{
+  return `<div class="stack"><section class="card"><div class="row between"><div><h3>計畫開始日</h3><p class="small muted" style="margin:0">所有截止日依此推算，共 26 週</p></div><input type="date" id="startDate" value="${S.start}" aria-label="計畫開始日"></div></section>
+  ${PHASES.map(ph=>{const its=PLAN.filter(p=>p.w>=ph.from&&p.w<=ph.to),d=its.filter(p=>S.done[p.id]).length;
+  return `<section class="card"><div class="eyebrow">第 ${ph.from}–${ph.to} 週</div><div class="row between"><h2>第 ${ph.n} 階段 · ${ph.title}</h2><span class="mono small">${d}/${its.length}</span></div><div class="bar"><i style="width:${d/its.length*100}%"></i></div>
+  <div class="list">${its.map(p=>{const due=dueOf(p),late=!S.done[p.id]&&diffDays(due,TODAY)<0;return itemHTML({id:p.id,kind:'p',type:late?'bad':'goal',tag:'第 '+p.w+' 週',t:p.t,meta:(late?'逾期 · ':'截止 ')+fmt(due)},late)}).join('')}</div></section>`}).join('')}
+  <section class="card"><h3>利益衝突提醒</h3><p class="small muted" style="margin:6px 0 0">正在替某個項目方招募時，不要向他們自薦，也絕不把人選資料用在自己身上。投遞前先確認 Mighty DAO 對「加入客戶公司」的規定。</p></section></div>`;
+};
+V.quiz=()=>{
+  const marks=Object.values(S.quiz).map(x=>x&&x.mark).filter(Boolean),ok=marks.filter(x=>x==='ok').length;
+  return `<div class="stack"><section class="card"><div class="row between"><div><h3>理解程度自我測驗</h3><p class="small muted" style="margin:0">先寫答案，再看參考答案並自評</p></div><div class="mono"><b style="color:var(--accent);font-size:1.4rem">${ok}</b> / ${QUIZ.length} 答對</div></div></section>
+  ${QUIZ.map((x,i)=>{const s=S.quiz['q'+i]||{};return `<section class="card q"><h3><span class="qn">${pad(i+1)}</span>${x.q}</h3>
+  <textarea id="qa${i}" data-q="${i}" placeholder="寫下你的答案…" aria-label="第 ${i+1} 題答案"></textarea>
+  <div class="marks"><button class="btn" data-reveal="${i}" aria-expanded="${!!s.open}">${s.open?'隱藏':'顯示'}參考答案</button></div>
+  <div class="ans" ${s.open?'':'hidden'}>${x.a}</div>
+  <div class="marks" ${s.open?'':'hidden'}>${[['ok','答對'],['part','部分正確'],['no','再加強']].map(([k,l])=>`<button class="mark ${k}" data-mark="${i}" data-v="${k}" aria-pressed="${s.mark===k}">${l}</button>`).join('')}</div></section>`}).join('')}</div>`;
+};
+let learnSeg='flow',gq='';
+V.learn=()=>{
+  const seg=`<div class="seg" role="group" aria-label="知識庫分類">${[['flow','工作流程'],['roles','分工'],['gloss','Web3 詞彙']].map(([k,l])=>`<button data-seg="${k}" aria-pressed="${learnSeg===k}">${l}</button>`).join('')}</div>`;
+  let body='';
+  if(learnSeg==='flow')body=`<section class="card"><h2>8 步驟專案流程</h2><p class="small muted" style="margin:2px 0 10px">AM 是項目 Owner；AL 只在需要時介入</p><div class="steps">${STEPS.map((s,i)=>`<div class="step"><div class="num">${pad(i+1)}</div><div class="body"><h3>${s[0]}${s[1]?`<span class="sla">${s[1]}</span>`:''}</h3><p class="small" style="margin:2px 0 0">${s[2]}</p></div></div>`).join('')}</div></section>`;
+  if(learnSeg==='roles')body=`<div class="duo"><section class="card"><span class="tag t-am">AM · Project Owner</span><ol>${AM_DUTY.map(x=>'<li>'+x+'</li>').join('')}</ol><p class="small muted">Documentation 不是行政附加工作，而是 Account Management 的基本工作。</p></section>
+  <section class="card"><span class="tag t-al">AL · Support &amp; Coordination</span><ol>${AL_DUTY.map(x=>'<li>'+x+'</li>').join('')}</ol><p class="small muted">AL 是 backup，帶領團隊一起協同管理項目。</p></section></div>
+  <section class="card"><h3>遇到問題怎麼辦？</h3><ul class="small" style="margin:6px 0 0;padding-left:18px"><li>項目太多、時間無法管理</li><li>項目方需求不清楚</li><li>Follow-up 卡住</li><li>需要其他 team member 協助</li><li>流程本身不合理</li><li>有特殊情況</li></ul><p class="small" style="margin:8px 0 0"><b>→ 主動私訊 Account Lead（LINE 或 TG 都可以）</b></p></section>`;
+  if(learnSeg==='gloss'){const q=gq.trim().toLowerCase();
+    body=`<input class="search" id="gsearch" type="search" placeholder="搜尋詞彙，例如 Gas、DAO、解鎖" value="${esc(gq)}" aria-label="搜尋詞彙">`+Object.entries(GLOSS).map(([g,arr])=>{const f=arr.filter(t=>!q||t.join(' ').toLowerCase().includes(q));return f.length?`<section class="card"><div class="eyebrow">${g}</div>${f.map(t=>`<div class="term"><b>${t[0]}</b><span class="en">${t[1]}</span><p>${t[2]}</p></div>`).join('')}</section>`:''}).join('')||'<p class="empty">找不到符合的詞彙。</p>';}
+  return `<div class="stack">${seg}${body}</div>`;
+};
+const TITLES={today:'今日',calendar:'行事曆',plan:'轉職計畫',quiz:'測驗',learn:'知識庫'};
+
+/* ---------- render + events ---------- */
+let cur='today';
+function render(){
+  const h=location.hash.slice(1);cur=V[h]?h:'today';
+  document.getElementById('title').textContent=TITLES[cur];
+  document.getElementById('view').innerHTML=V[cur]();
+  document.querySelectorAll('nav.tabs a').forEach(a=>a.dataset.v===cur?a.setAttribute('aria-current','page'):a.removeAttribute('aria-current'));
+  if(cur==='quiz')QUIZ.forEach((_,i)=>{const t=document.getElementById('qa'+i);if(t)t.value=(S.quiz['q'+i]||{}).a||''});
+}
+window.addEventListener('hashchange',()=>{render();scrollTo(0,0)});
+document.addEventListener('change',e=>{
+  const t=e.target;
+  if(t.matches('input[type=checkbox][data-kind]')){(t.dataset.kind==='p'?S.done:S.routine)[t.dataset.id]=t.checked||undefined;if(!t.checked)delete (t.dataset.kind==='p'?S.done:S.routine)[t.dataset.id];save();const y=scrollY;render();scrollTo(0,y)}
+  if(t.id==='startDate'&&t.value){S.start=t.value;save();render()}
+});
+document.addEventListener('input',e=>{
+  const t=e.target;
+  if(t.dataset.q!==undefined){const k='q'+t.dataset.q;S.quiz[k]={...(S.quiz[k]||{}),a:t.value};save()}
+  if(t.id==='gsearch'){gq=t.value;render();const s=document.getElementById('gsearch');s.focus();s.setSelectionRange(s.value.length,s.value.length)}
+});
+document.addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;const y=scrollY;
+  if(b.dataset.cal){if(b.dataset.cal==='today'){calMonth=new Date(TODAY.getFullYear(),TODAY.getMonth(),1);calSel=ymd(TODAY)}else calMonth=new Date(calMonth.getFullYear(),calMonth.getMonth()+Number(b.dataset.cal),1);render();return}
+  if(b.dataset.day){calSel=b.dataset.day;const d=parse(calSel);if(d.getMonth()!==calMonth.getMonth())calMonth=new Date(d.getFullYear(),d.getMonth(),1);render();scrollTo(0,y);return}
+  if(b.dataset.reveal!==undefined){const k='q'+b.dataset.reveal;S.quiz[k]={...(S.quiz[k]||{}),open:!(S.quiz[k]||{}).open};save();render();scrollTo(0,y);return}
+  if(b.dataset.mark!==undefined){const k='q'+b.dataset.mark;S.quiz[k]={...(S.quiz[k]||{}),mark:b.dataset.v};save();render();scrollTo(0,y);return}
+  if(b.dataset.seg){learnSeg=b.dataset.seg;render()}
+});
+render();
+
+/* ---------- account sync (db capability) ---------- */
+(async()=>{
+  if(!window.claude||!window.claude.use)return;
+  try{
+    const [db,user]=await Promise.all([claude.use('db'),claude.use('user')]);
+    if(!db||!user)return;
+    const id=await user.id();if(!id)return;
+    const r=db.collection('data/users/'+id).doc('state');
+    const snap=await Promise.race([r.get(),new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),10000))]);
+    ref=r;
+    const remote=snap&&snap.exists?snap.data():null;
+    if(remote&&remote.start){S=Object.assign({start:S.start,done:{},routine:{},quiz:{}},JSON.parse(JSON.stringify(remote)));try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){};render();setSync('已同步到帳號','ok')}
+    else flush();
+  }catch(e){setSync('無法連線，已存於此裝置','')}
+})();
+</script>
+</body>
+</html>
